@@ -12,13 +12,30 @@ const exclude = new Set([
     "0x01-node",
 ])
 
-async function uploadDirectory(client, localDir, remoteDir) {
+async function syncDirectory(client, localDir, remoteDir) {
     await client.ensureDir(remoteDir)
+    const remoteFiles = await client.list(remoteDir)
+    const localFiles = fs.readdirSync(localDir)
 
-    const files = fs.readdirSync(localDir)
-    for (const file of files) {
+    const localSet = new Set(localFiles)
+
+    for (const file of remoteFiles) {
+        if (exclude.has(file.name)) continue
+        const localPath = path.join(localDir, file.name)
+        if (!localSet.has(file.name)) {
+            const remotePath = remoteDir + "/" + file.name
+            console.log(`🗑️ Deleting ${remotePath} (not found locally)`)
+            if (file.isDirectory) {
+                await client.removeDir(remotePath)
+            } else {
+                await client.remove(remotePath)
+            }
+        }
+    }
+
+    for (const file of localFiles) {
         if (exclude.has(file)) {
-            console.log(`Skipping excluded: ${file}`)
+            console.log(`⏭️ Skipping excluded: ${file}`)
             continue
         }
 
@@ -27,9 +44,9 @@ async function uploadDirectory(client, localDir, remoteDir) {
         const stats = fs.statSync(localPath)
 
         if (stats.isDirectory()) {
-            await uploadDirectory(client, localPath, remotePath)
+            await syncDirectory(client, localPath, remotePath)
         } else {
-            console.log(`Uploading ${localPath} to ${remotePath}`)
+            console.log(`⬆️ Uploading ${localPath} → ${remotePath}`)
             await client.uploadFrom(localPath, remotePath)
         }
     }
@@ -48,11 +65,10 @@ async function main() {
 
         const localDir = path.resolve(__dirname, "..")
         const remoteDir = process.env.FTP_REMOTE_DIR
-        await uploadDirectory(client, localDir, remoteDir)
-        console.log("✅ Upload completed!")
-    }
-    catch(err) {
-        console.error("❌ FTP Upload failed:", err)
+        await syncDirectory(client, localDir, remoteDir)
+        console.log("✅ Sync completed!")
+    } catch (err) {
+        console.error("❌ FTP sync failed:", err)
     }
     client.close()
 }
