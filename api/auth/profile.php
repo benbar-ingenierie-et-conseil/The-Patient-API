@@ -5,7 +5,7 @@ header("Access-Control-Allow-Methods: GET");
 header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-include_once '../config/database.php';
+include_once '../config/Database.php';
 include_once '../models/User.php';
 
 $database = new Database();
@@ -22,7 +22,6 @@ if($db === null) {
 
 $user = new User($db);
 
-// Get user ID from query parameter
 $user_id = isset($_GET['user_id']) ? $_GET['user_id'] : '';
 
 if(empty($user_id)) {
