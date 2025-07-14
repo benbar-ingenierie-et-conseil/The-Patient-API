@@ -8,17 +8,16 @@ class Database {
     private $conn;
 
     public function __construct() {
-        $env = $this->loadEnv();
-        $this->host = $env['DB_HOST'] ?? 'localhost';
-        $this->db_name = $env['DB_NAME'] ?? '';
-        $this->username = $env['DB_USER'] ?? '';
-        $this->password = $env['DB_PASS'] ?? '';
+        $this->host     = $this->getEnvVariable('DB_HOST', 'localhost');
+        $this->db_name  = $this->getEnvVariable('DB_NAME', '');
+        $this->username = $this->getEnvVariable('DB_USER', '');
+        $this->password = $this->getEnvVariable('DB_PASS', '');
     }
 
     public function connect() {
         $this->conn = null;
         try {
-            $dsn = "mysql:host={$this->host};dbname={$this->db_name};charset=utf8";
+            $dsn = "mysql:host={$this->host};dbname={$this->db_name};charset=utf8mb4";
             $this->conn = new PDO($dsn, $this->username, $this->password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $e) {
@@ -28,12 +27,23 @@ class Database {
         return $this->conn;
     }
 
-    private function loadEnv() {
+    private function getEnvVariable($key, $default = null) {
         $envPath = __DIR__ . '/../.env';
-        if (!file_exists($envPath)) {
-            echo json_encode(["error" => ".env file not found"]);
-            exit;
+        if (!file_exists($envPath)) return $default;
+
+        $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos(trim($line), '#') === 0) continue;
+            if (!str_contains($line, '=')) continue;
+            list($envKey, $envValue) = explode('=', $line, 2);
+            if (trim($envKey) === $key) {
+                return trim($envValue);
+            }
         }
-        return parse_ini_file($envPath);
+        return $default;
+    }
+
+    public function getConnection() {
+        return $this->connect();
     }
 }
