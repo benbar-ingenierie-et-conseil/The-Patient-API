@@ -19,16 +19,16 @@ $appointment = new Appointment($db);
 
 if ($_SERVER['REQUEST_METHOD'] == 'GET') {
     if (isset($_GET['doctor_id']) && isset($_GET['date'])) {
-        $available_slots = $appointment->getAvailableTimeSlots($_GET['doctor_id'], $_GET['date']);
-        
+        $slots = $appointment->getAvailableTimeSlots($_GET['doctor_id'], $_GET['date']);
+
         http_response_code(200);
-        echo json_encode(array_values($available_slots));
+        echo json_encode($slots);
     } else {
         http_response_code(400);
-        echo json_encode(array("message" => "Doctor ID and date required"));
+        echo json_encode(["message" => "Doctor ID and date required"]);
     }
 } else {
     http_response_code(405);
-    echo json_encode(array("message" => "Method not allowed"));
+    echo json_encode(["message" => "Method not allowed"]);
 }
 ?>

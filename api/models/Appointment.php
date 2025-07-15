@@ -273,7 +273,10 @@ class Appointment {
             $booked_slots[] = substr($row['appointment_time'], 0, 5); // Format HH:MM
         }
 
-        // Return available slots
-        return array_diff($slots, $booked_slots);
+        return [
+        'available' => array_values(array_diff($slots, $booked_slots)),
+        'booked' => $booked_slots
+        ];
+
     }
 }

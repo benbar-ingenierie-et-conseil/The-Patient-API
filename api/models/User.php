@@ -157,4 +157,8 @@ class User {
         return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
     }
 
+    public function isValidPhone($phone) {
+        return preg_match('/^\+?[0-9]{10,15}$/', $phone);
+    }
+
 }

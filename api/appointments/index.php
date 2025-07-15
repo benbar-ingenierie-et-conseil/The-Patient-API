@@ -238,7 +238,6 @@ try {
             break;
 
         case 'DELETE':
-            // Delete appointment (not recommended, use cancel instead)
             $data = json_decode(file_get_contents("php://input"));
 
             if (!empty($data->id)) {
