@@ -24,7 +24,6 @@ class User {
         $this->conn = $db;
     }
 
-    // Get all users/patients
     public function getAll() {
         $query = "SELECT id, email, phone, first_name, last_name, date_of_birth, 
                          gender, address, emergency_contact_name, emergency_contact_phone,
@@ -39,7 +38,6 @@ class User {
         return $stmt;
     }
 
-    // Get single user/patient
     public function getById($id) {
         $query = "SELECT id, email, phone, first_name, last_name, date_of_birth,
                         gender, address, emergency_contact_name, emergency_contact_phone,
@@ -55,9 +53,26 @@ class User {
 
         return $row ?: null;
     }
+    
+    public function getUserById($user_id) {
+        $query = "SELECT id, email, first_name, last_name, phone, date_of_birth, 
+                         gender, address, emergency_contact_name, emergency_contact_phone,
+                         profile_image, created_at 
+                  FROM " . $this->table_name . " 
+                  WHERE id = :id AND is_active = 1 
+                  LIMIT 0,1";
 
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $user_id);
+        $stmt->execute();
 
-    // Get user by email
+        if($stmt->rowCount() > 0) {
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+
+        return false;
+    }
+
     public function getByEmail($email) {
         $query = "SELECT id, email, password_hash, phone, first_name, last_name, 
                          date_of_birth, gender, address, emergency_contact_name, 
@@ -92,8 +107,6 @@ class User {
         return false;
     }
 
-
-    // Create user
     public function create() {
         $query = "INSERT INTO " . $this->table_name . "
                   SET id = UUID(),
@@ -114,7 +127,6 @@ class User {
 
         $stmt = $this->conn->prepare($query);
 
-        // Sanitize inputs
         $this->email = htmlspecialchars(strip_tags($this->email));
         $this->password_hash = htmlspecialchars(strip_tags($this->password_hash));
         $this->phone = htmlspecialchars(strip_tags($this->phone));
@@ -127,7 +139,6 @@ class User {
         $this->emergency_contact_phone = htmlspecialchars(strip_tags($this->emergency_contact_phone));
         $this->profile_image = htmlspecialchars(strip_tags($this->profile_image));
 
-        // Bind parameters
         $stmt->bindParam(':email', $this->email);
         $stmt->bindParam(':password_hash', $this->password_hash);
         $stmt->bindParam(':phone', $this->phone);
@@ -141,7 +152,6 @@ class User {
         $stmt->bindParam(':profile_image', $this->profile_image);
 
         if ($stmt->execute()) {
-            // Get the created user ID
             $query = "SELECT id FROM " . $this->table_name . " WHERE email = :email";
             $stmt = $this->conn->prepare($query);
             $stmt->bindParam(':email', $this->email);
@@ -160,5 +170,60 @@ class User {
     public function isValidPhone($phone) {
         return preg_match('/^\+?[0-9]{10,15}$/', $phone);
     }
+
+    public function emailExistsForOtherUser($current_user_id) {
+        $query = "SELECT id FROM " . $this->table_name . " 
+                WHERE email = :email AND id != :current_user_id AND is_active = 1 
+                LIMIT 0,1";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':email', $this->email);
+        $stmt->bindParam(':current_user_id', $current_user_id);
+        $stmt->execute();
+
+        return $stmt->rowCount() > 0;
+    }
+
+    public function updateProfile() {
+        $query = "UPDATE " . $this->table_name . " 
+                SET email = COALESCE(:email, email),
+                    phone = COALESCE(:phone, phone),
+                    first_name = COALESCE(:first_name, first_name),
+                    last_name = COALESCE(:last_name, last_name),
+                    date_of_birth = COALESCE(:date_of_birth, date_of_birth),
+                    gender = COALESCE(:gender, gender),
+                    address = COALESCE(:address, address),
+                    emergency_contact_name = COALESCE(:emergency_contact_name, emergency_contact_name),
+                    emergency_contact_phone = COALESCE(:emergency_contact_phone, emergency_contact_phone),
+                    profile_image = COALESCE(:profile_image, profile_image),
+                    updated_at = NOW()
+                WHERE id = :id AND is_active = 1";
+
+        $stmt = $this->conn->prepare($query);
+
+        if ($this->email) $this->email = htmlspecialchars(strip_tags($this->email));
+        if ($this->phone) $this->phone = htmlspecialchars(strip_tags($this->phone));
+        if ($this->first_name) $this->first_name = htmlspecialchars(strip_tags($this->first_name));
+        if ($this->last_name) $this->last_name = htmlspecialchars(strip_tags($this->last_name));
+        if ($this->gender) $this->gender = htmlspecialchars(strip_tags($this->gender));
+        if ($this->address) $this->address = htmlspecialchars(strip_tags($this->address));
+        if ($this->emergency_contact_name) $this->emergency_contact_name = htmlspecialchars(strip_tags($this->emergency_contact_name));
+        if ($this->emergency_contact_phone) $this->emergency_contact_phone = htmlspecialchars(strip_tags($this->emergency_contact_phone));
+
+        $stmt->bindParam(":id", $this->id);
+        $stmt->bindParam(":email", $this->email);
+        $stmt->bindParam(":phone", $this->phone);
+        $stmt->bindParam(":first_name", $this->first_name);
+        $stmt->bindParam(":last_name", $this->last_name);
+        $stmt->bindParam(":date_of_birth", $this->date_of_birth);
+        $stmt->bindParam(":gender", $this->gender);
+        $stmt->bindParam(":address", $this->address);
+        $stmt->bindParam(":emergency_contact_name", $this->emergency_contact_name);
+        $stmt->bindParam(":emergency_contact_phone", $this->emergency_contact_phone);
+        $stmt->bindParam(":profile_image", $this->profile_image);
+
+        return $stmt->execute();
+    }
+
 
 }
